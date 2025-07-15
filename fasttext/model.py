@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import numpy as np
 from utils import *
+import pickle
 
 class fastText(nn.Module):
     def __init__(self, config, vocab_size, word_embeddings):
@@ -24,6 +25,7 @@ class fastText(nn.Module):
         self.softmax = nn.Softmax()
         
     def forward(self, x):
+        # print("forward x.shape={}, type={}, x={}".format(x.shape, x.dtype, x))
         embedded_sent = self.embeddings(x).permute(1,0,2)
         h = self.fc1(embedded_sent.mean(1))
         z = self.fc2(h)
@@ -58,6 +60,13 @@ class fastText(nn.Module):
                 x = batch.text
                 y = (batch.label - 1).type(torch.LongTensor)
             y_pred = self.__call__(x)
+            # print("run_epoch y_pred.shape={}, y_pred.dtype={}, y_pred={}".format(y_pred.shape, y_pred.dtype, y_pred))
+            # exit(1)
+            if i == 0:
+                # save x, y, y_pred to file
+                with open('x_y.pkl', 'wb') as f:
+                    pickle.dump((x, y), f)
+
             loss = self.loss_op(y_pred, y)
             loss.backward()
             losses.append(loss.data.cpu().numpy())

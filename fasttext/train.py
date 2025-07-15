@@ -9,7 +9,58 @@ import torch.optim as optim
 from torch import nn
 import torch
 
+import os
+import pickle
+
 if __name__=='__main__':
+    # if model.pth exist, just load the model and save to onnx
+    # to onnx
+    # if os.path.exists('model.pth') and os.path.exists('dataset.pkl'):
+    if os.path.exists('model.pth') and os.path.exists('dataset.pkl') and os.path.exists('x_y.pkl'):
+        config = Config()
+        with open('dataset.pkl', 'rb') as f:
+            vocab, word_embeddings = pickle.load(f)
+        with open('x_y.pkl', 'rb') as f:
+            x, y = pickle.load(f)
+
+        print("x={}, x.shape={}".format(x, x.shape))
+        print("y={}, y.shape={}".format(y, y.shape))
+
+
+        model = fastText(config, len(vocab), word_embeddings)
+        model.load_state_dict(torch.load('model.pth'))
+        model.eval()
+
+        y_pred = model(x)
+        print('y_pred: {}'.format(y_pred))
+
+        sequence_length = 94  # Static sequence length
+        batch_size = 1  # Static batch size
+        input_ids = torch.ones((sequence_length, batch_size), dtype=torch.int64)
+        model.eval()  # Ensure the model is in evaluation mode
+
+        # save x bin input
+        # take the first column of x as sample
+        x_sample = x.numpy()[:, 0][0: sequence_length]
+        print('x_sample: {}'.format(x_sample))
+        with open('x_sample.bin', 'wb') as f:
+            x_sample.tofile(f)
+
+        torch.onnx.export(
+            model,
+            args=(input_ids),  # Inputs to the model
+            f="fasttext.onnx",
+            input_names=["input_ids"],  # Names of the input nodes
+            output_names=["output"],  # Name of the output node
+            dynamic_axes=None,  # No dynamic axes, implying static batch size and sequence length
+            opset_version=7,  # Use opset version 14
+            do_constant_folding=True,  # Whether to perform constant folding for optimization
+        )
+
+        print('model.pth exists, model exported to fasttext.onnx')
+        exit(0)
+
+
     config = Config()
     train_file = '../data/ag_news.train'
     if len(sys.argv) > 2:
@@ -26,8 +77,8 @@ if __name__=='__main__':
     # Create Model with specified optimizer and loss function
     ##############################################################
     model = fastText(config, len(dataset.vocab), dataset.word_embeddings)
-    if torch.cuda.is_available():
-        model.cuda()
+    # if torch.cuda.is_available():
+    #     model.cuda()
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=config.lr)
     NLLLoss = nn.NLLLoss()
@@ -51,3 +102,11 @@ if __name__=='__main__':
     print ('Final Training Accuracy: {:.4f}'.format(train_acc))
     print ('Final Validation Accuracy: {:.4f}'.format(val_acc))
     print ('Final Test Accuracy: {:.4f}'.format(test_acc))
+
+    # save model
+    print('save model to model.pth')
+    torch.save(model.state_dict(), 'model.pth')
+    model.load_state_dict(torch.load('model.pth'))
+    # save dadtaset.vocab and dataset.word_embeddings to pickle
+    with open('dataset.pkl', 'wb') as f:
+        pickle.dump((dataset.vocab, dataset.word_embeddings), f)
