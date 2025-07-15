@@ -53,12 +53,12 @@ class fastText(nn.Module):
             
         for i, batch in enumerate(train_iterator):
             self.optimizer.zero_grad()
-            if torch.cuda.is_available():
-                x = batch.text.cuda()
-                y = (batch.label - 1).type(torch.cuda.LongTensor)
-            else:
-                x = batch.text
-                y = (batch.label - 1).type(torch.LongTensor)
+            # if torch.cuda.is_available():
+            #     x = batch.text.cuda()
+            #     y = (batch.label - 1).type(torch.cuda.LongTensor)
+            # else:
+            x = batch.text
+            y = (batch.label - 1).type(torch.LongTensor)
             y_pred = self.__call__(x)
             # print("run_epoch y_pred.shape={}, y_pred.dtype={}, y_pred={}".format(y_pred.shape, y_pred.dtype, y_pred))
             # exit(1)
