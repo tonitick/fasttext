@@ -200,3 +200,24 @@ def evaluate_model(model, iterator):
     # score = accuracy_score(all_y, np.array(all_preds).flatten())
     # return score
     return np.mean(np.array(all_preds) == np.array(all_y))
+
+def save_dataset(iterator, filename='dataset.pkl'):
+    datalist = []
+    for idx, batch in enumerate(iterator):
+        x = batch.text.numpy()
+        # reshape x from (size, 1) to (size,)
+        x = x.reshape(-1)
+        y = batch.label.numpy()
+        # if x size < 94, pad with 1, otherwise truncate to 94
+        if x.shape[0] < 94:
+            x = np.pad(x, (0, 94 - x.shape[0]), 'constant', constant_values=1)
+        else:
+            x = x[:94]
+        if idx == 0:
+            y[0] = y[0] - 1  # Adjust label to be zero-indexed
+            print(f"save_dataset: x={x}, x.shape={x.shape}, x.dtype={x.dtype}")
+            print(f"save_dataset: y={y}, y.shape={y.shape}, y.dtype={y.dtype}")
+        datalist.append((x, y))
+    # save datalist to file
+    with open(filename, 'wb') as f:
+        pickle.dump(datalist, f)

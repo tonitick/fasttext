@@ -17,47 +17,55 @@ if __name__=='__main__':
     # to onnx
     # if os.path.exists('model.pth') and os.path.exists('dataset.pkl'):
     if os.path.exists('model.pth') and os.path.exists('train_examples.pkl') and os.path.exists('test_examples.pkl') and os.path.exists('vocab.pkl') and os.path.exists('word_embeddings.pkl'):
+        ############### load data from pickle
         config = Config()
+        config.batch_size = 1  # Set batch size to 1 for neuron range analysis
         train_iterator, val_iterator, test_iterator, vocab, word_embeddings, train_val_iterator = load_data_from_pickle(config)
 
         # with open('dataset.pkl', 'rb') as f:
         #     vocab, word_embeddings = pickle.load(f)
-        with open('x_y.pkl', 'rb') as f:
-            x, y = pickle.load(f)
+        # with open('x_y.pkl', 'rb') as f:
+        #     x, y = pickle.load(f)
 
-        print("x={}, x.shape={}".format(x, x.shape))
-        print("y={}, y.shape={}".format(y, y.shape))
+        # print("x={}, x.shape={}".format(x, x.shape))
+        # print("y={}, y.shape={}".format(y, y.shape))
 
 
+        ############### validate accuracy
         model = fastText(config, len(vocab), word_embeddings)
         model.load_state_dict(torch.load('model.pth'))
         model.eval()
 
-        y_pred = model(x)
-        print('y_pred: {}'.format(y_pred))
+        # # y_pred = model(x)
+        # # print('y_pred: {}'.format(y_pred))
 
-        train_acc = evaluate_model(model, train_iterator)
-        val_acc = evaluate_model(model, val_iterator)
-        test_acc = evaluate_model(model, test_iterator)
-        train_ori_acc = evaluate_model(model, train_val_iterator)
+        # train_acc = evaluate_model(model, train_iterator)
+        # val_acc = evaluate_model(model, val_iterator)
+        # test_acc = evaluate_model(model, test_iterator)
+        # train_ori_acc = evaluate_model(model, train_val_iterator)
 
-        print ('Final Training Accuracy (trained): {:.4f}'.format(train_acc))
-        print ('Final Validation Accuracy (trained): {:.4f}'.format(val_acc))
-        print ('Final Training + Validation Accuracy (trained): {:.4f}'.format(train_ori_acc))
-        print ('Final Test Accuracy (trained): {:.4f}'.format(test_acc))
+        # print ('Final Training Accuracy (trained): {:.4f}'.format(train_acc))
+        # print ('Final Validation Accuracy (trained): {:.4f}'.format(val_acc))
+        # print ('Final Training + Validation Accuracy (trained): {:.4f}'.format(train_ori_acc))
+        # print ('Final Test Accuracy (trained): {:.4f}'.format(test_acc))
 
-        # export to onnx
+        ############### save train/test data to pickle
+        save_dataset(train_val_iterator, filename='train_val_datalist.pkl')
+        save_dataset(test_iterator, filename='test_datalist.pkl')
+
+        ############### export to onnx
         sequence_length = 94  # Static sequence length
         batch_size = 1  # Static batch size
         input_ids = torch.ones((sequence_length, batch_size), dtype=torch.int64)
         model.eval()  # Ensure the model is in evaluation mode
 
-        # save x bin input
-        # take the first column of x as sample
-        x_sample = x.numpy()[:, 0][0: sequence_length]
-        print('x_sample: {}'.format(x_sample))
-        with open('x_sample.bin', 'wb') as f:
-            x_sample.tofile(f)
+        # # save x bin input
+        # # take the first column of x as sample
+        # x_sample = x.numpy()[:, 0][0: sequence_length]
+        # print('x_sample: {}'.format(x_sample))
+        # print('x_sample.shape: {}'.format(x_sample.shape))
+        # with open('x_sample.bin', 'wb') as f:
+        #     x_sample.tofile(f)
 
         torch.onnx.export(
             model,
