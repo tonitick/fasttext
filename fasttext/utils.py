@@ -208,13 +208,13 @@ def save_dataset(iterator, filename='dataset.pkl'):
         # reshape x from (size, 1) to (size,)
         x = x.reshape(-1)
         y = batch.label.numpy()
+        y[0] = y[0] - 1  # Adjust label to be zero-indexed
         # if x size < 94, pad with 1, otherwise truncate to 94
         if x.shape[0] < 94:
             x = np.pad(x, (0, 94 - x.shape[0]), 'constant', constant_values=1)
         else:
             x = x[:94]
         if idx == 0:
-            y[0] = y[0] - 1  # Adjust label to be zero-indexed
             print(f"save_dataset: x={x}, x.shape={x.shape}, x.dtype={x.dtype}")
             print(f"save_dataset: y={y}, y.shape={y.shape}, y.dtype={y.dtype}")
         datalist.append((x, y))
