@@ -16,10 +16,12 @@ if __name__=='__main__':
     # if model.pth exist, just load the model and save to onnx
     # to onnx
     # if os.path.exists('model.pth') and os.path.exists('dataset.pkl'):
-    if os.path.exists('model.pth') and os.path.exists('dataset.pkl') and os.path.exists('x_y.pkl'):
+    if os.path.exists('model.pth') and os.path.exists('train_examples.pkl') and os.path.exists('test_examples.pkl') and os.path.exists('vocab.pkl') and os.path.exists('word_embeddings.pkl'):
         config = Config()
-        with open('dataset.pkl', 'rb') as f:
-            vocab, word_embeddings = pickle.load(f)
+        train_iterator, val_iterator, test_iterator, vocab, word_embeddings, train_val_iterator = load_data_from_pickle(config)
+
+        # with open('dataset.pkl', 'rb') as f:
+        #     vocab, word_embeddings = pickle.load(f)
         with open('x_y.pkl', 'rb') as f:
             x, y = pickle.load(f)
 
@@ -34,6 +36,17 @@ if __name__=='__main__':
         y_pred = model(x)
         print('y_pred: {}'.format(y_pred))
 
+        train_acc = evaluate_model(model, train_iterator)
+        val_acc = evaluate_model(model, val_iterator)
+        test_acc = evaluate_model(model, test_iterator)
+        train_ori_acc = evaluate_model(model, train_val_iterator)
+
+        print ('Final Training Accuracy (trained): {:.4f}'.format(train_acc))
+        print ('Final Validation Accuracy (trained): {:.4f}'.format(val_acc))
+        print ('Final Training + Validation Accuracy (trained): {:.4f}'.format(train_ori_acc))
+        print ('Final Test Accuracy (trained): {:.4f}'.format(test_acc))
+
+        # export to onnx
         sequence_length = 94  # Static sequence length
         batch_size = 1  # Static batch size
         input_ids = torch.ones((sequence_length, batch_size), dtype=torch.int64)
@@ -98,9 +111,11 @@ if __name__=='__main__':
     train_acc = evaluate_model(model, dataset.train_iterator)
     val_acc = evaluate_model(model, dataset.val_iterator)
     test_acc = evaluate_model(model, dataset.test_iterator)
+    train_ori_acc = evaluate_model(model, dataset.train_val_iterator)
 
     print ('Final Training Accuracy: {:.4f}'.format(train_acc))
     print ('Final Validation Accuracy: {:.4f}'.format(val_acc))
+    print ('Final Training + Validation Accuracy: {:.4f}'.format(train_ori_acc))
     print ('Final Test Accuracy: {:.4f}'.format(test_acc))
 
     # save model
@@ -108,5 +123,5 @@ if __name__=='__main__':
     torch.save(model.state_dict(), 'model.pth')
     model.load_state_dict(torch.load('model.pth'))
     # save dadtaset.vocab and dataset.word_embeddings to pickle
-    with open('dataset.pkl', 'wb') as f:
-        pickle.dump((dataset.vocab, dataset.word_embeddings), f)
+    # with open('dataset.pkl', 'wb') as f:
+    #     pickle.dump((dataset.vocab, dataset.word_embeddings), f)
