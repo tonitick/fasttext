@@ -79,6 +79,8 @@ if __name__=='__main__':
         )
 
         print('model.pth exists, model exported to fasttext.onnx')
+
+        convert_ext_dataset()
         exit(0)
 
 

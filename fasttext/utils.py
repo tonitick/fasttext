@@ -221,3 +221,50 @@ def save_dataset(iterator, filename='dataset.pkl'):
     # save datalist to file
     with open(filename, 'wb') as f:
         pickle.dump(datalist, f)
+
+def convert_ext_dataset(w2v_file='../data/glove.840B.300d.txt'):
+    NLP = en_core_web_sm.load()
+    tokenizer = lambda sent: [x.text for x in NLP.tokenizer(sent) if x.text != " "]
+
+    TEXT = data.Field(sequential=True, tokenize=tokenizer, lower=True)
+    LABEL = data.Field(sequential=False, use_vocab=False)
+    datafields = [("text",TEXT),("label",LABEL)]
+
+    with open('train_examples.pkl', 'rb') as f:
+        train_examples = pickle.load(f)
+    train_data = data.Dataset(train_examples, datafields)
+    # with open('test_examples.pkl', 'rb') as f:
+    #     test_examples = pickle.load(f)
+    # test_data = data.Dataset(test_examples, datafields)
+
+    import random
+    random.seed(100) # make it deterministic
+    train_val_data = train_data
+    train_data, val_data = train_data.split(split_ratio=0.8)
+
+    TEXT.build_vocab(train_data, vectors=Vectors(w2v_file))
+
+    with open('dbpedia14_train_datasetlist_text.pkl', 'rb') as f:
+        ext_data_text_list = pickle.load(f)
+
+    datalist = []
+    for i, text in enumerate(ext_data_text_list):
+        prompt = text.strip().lower()
+        tokens = tokenizer(prompt)
+        ids = [TEXT.vocab.stoi.get(t, TEXT.vocab.stoi[TEXT.unk_token]) for t in tokens]
+        # torch_ids = torch.LongTensor(ids).unsqueeze(1)
+        torch_ids = torch.tensor(ids, dtype=torch.int64)
+        if torch_ids.shape[0] < 94:
+            torch_ids = torch.nn.functional.pad(torch_ids, (0, 94 - torch_ids.shape[0]), value=1)
+        else:
+            torch_ids = torch_ids[:94]
+        datalist.append((torch_ids.numpy()))
+
+        if i == 0:
+            print(f"prompt: {prompt}")
+            print(f"tokens: {tokens}")
+            print(f"ids: {ids}")
+            print(f"torch_ids: {torch_ids}, shape={torch_ids.shape}, dtype={torch_ids.dtype}")
+
+    with open('dbpedia14_train_datasetlist.pkl', 'wb') as f:
+        pickle.dump(datalist, f)
